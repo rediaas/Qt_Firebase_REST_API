@@ -1,28 +1,16 @@
 #include "firebase.h"
-#include <string.h>
-#include <QIODevice>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QDateTime>
-#include <QCryptographicHash>
-#include <QtDebug>
-#include <QBuffer>
 
-Firebase::Firebase(const QString &hostName
-                   , const QString &dbPath
-                   , QObject *parent)
+Firebase::Firebase(const QString &hostName,
+                   const QString &dbPath,
+                   QObject *parent)
    : QObject(parent)
+   , manager(new QNetworkAccessManager(this))
+   , firebaseToken(QString(""))
 {
     host = forceEndChar(hostName.trimmed(), '/');
     host = host.append(dbPath.trimmed());
-    init();
-}
 
-void Firebase::init()
-{
-    manager=new QNetworkAccessManager(this);
-    connect(manager,SIGNAL(finished(QNetworkReply*))
-            ,this,SLOT(replyFinished(QNetworkReply*)));
+    connect(manager, &QNetworkAccessManager::finished, this, &Firebase::replyFinished);
 }
 
 void Firebase::listenEvents(const QString& queryString)
@@ -59,27 +47,25 @@ void Firebase::eventFinished()
 void Firebase::eventReadyRead()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    if(reply)
+    if (reply)
     {
         QByteArray line=reply->readLine();
-        if(!line.isEmpty())
+        if (!line.isEmpty())
         {
             QByteArray eventName=trimValue(line);
             line=reply->readAll();
-            if(eventName=="put")
+            if (eventName=="put")
             {
-                QString dataSnapshot(line);
-                emit eventDataChanged(dataSnapshot);
+                emit eventDataChanged(trimValue(line));
             }
         }
     }
     reply->readAll();
 }
 
-
-void Firebase::setValue(QJsonDocument jsonDoc
-                        , const QString &verb
-                        , const QString& queryString)
+void Firebase::setValue(QJsonDocument jsonDoc,
+                        const QString &verb,
+                        const QString& queryString)
 {
     QString path = buildPath(queryString);
     QNetworkRequest request(path);
@@ -150,4 +136,3 @@ QString Firebase::forceStartChar(const QString &string, char startCh)
         return QString(string).prepend(startCh);
     return string;
 }
-

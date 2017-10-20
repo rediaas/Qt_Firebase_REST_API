@@ -1,15 +1,21 @@
 #ifndef FIREBASE_H
 #define FIREBASE_H
 
+#include <QBuffer>
+#include <QCryptographicHash>
+#include <QDateTime>
+#include <QDebug>
+#include <QIODevice>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QObject>
+#include <QtGlobal>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 #include <QUrl>
 #include <QUrlQuery>
-#include <QDebug>
-#include <QtGlobal>
-#include <QJsonDocument>
+#include <string.h>
 
 /*!
  * \brief The Firebase class provides access to the Firebase Database REST API
@@ -48,9 +54,9 @@ public:
      *
      * \param parent Assign parent QObject if required.
      */
-    explicit Firebase(const QString& hostName = ""
-                      , const QString& dbPath = ""
-                      , QObject *parent = 0);
+    explicit Firebase(const QString& hostName = "",
+                      const QString& dbPath = "",
+                      QObject *parent = 0);
 
     /*!
      * \brief setValue Sends a write request to your Firebase database.
@@ -74,9 +80,9 @@ public:
      * Query choices include: access_token, shallow, print, callback, format
      * and download.
      */
-    void setValue(QJsonDocument jsonDoc
-                  , const QString& verb = "PATCH"
-                  , const QString &queryString = "");
+    void setValue(QJsonDocument jsonDoc,
+                  const QString& verb = "PATCH",
+                  const QString &queryString = "");
 
     /*!
      * \brief getValue Sends a read or "GET" request to your Firebase database.
@@ -122,9 +128,7 @@ public:
      *
      * \return The request that would be sent if the given query.
      */
-    QString getPath(const QString &queryString="");
-
-
+    QString getPath(const QString &queryString = "");
 
 signals:
     /*!
@@ -148,22 +152,22 @@ signals:
      * \param changedData holds the update detected to the REST endpoint.
      * The first signal received is the initial contents of the endpoint.
      */
-    void eventDataChanged(QString changedData);
+    void eventDataChanged(QByteArray changedData);
 
 private slots:
     void replyFinished(QNetworkReply*);
     void eventFinished();
     void eventReadyRead();
-private:
-    void init();    
 
+private:
+    QString host;
+    QString firebaseToken;
+    QNetworkAccessManager *manager;
+
+    void open(const QUrl &url);
 
     QByteArray signMessage(QByteArray toSign, QByteArray privateKey);
-    QString host;
-    QString firebaseToken="";
-    QNetworkAccessManager *manager;
     QString buildPath(const QString &queryString = "");
-    void open(const QUrl &url);
     QString forceEndChar(const QString& string, char endCh);
     QString forceStartChar(const QString& string, char startCh);
     QByteArray trimValue(const QByteArray &line) const;
