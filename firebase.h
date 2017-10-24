@@ -56,7 +56,7 @@ public:
      */
     explicit Firebase(const QString& hostName = "",
                       const QString& dbPath = "",
-                      QObject *parent = 0);
+                      QObject *parent = nullptr);
 
     /*!
      * \brief setValue Sends a write request to your Firebase database.

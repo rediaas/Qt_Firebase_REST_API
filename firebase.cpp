@@ -49,12 +49,12 @@ void Firebase::eventReadyRead()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply)
     {
-        QByteArray line=reply->readLine();
+        QByteArray line = reply->readLine();
         if (!line.isEmpty())
         {
-            QByteArray eventName=trimValue(line);
-            line=reply->readAll();
-            if (eventName=="put")
+            QByteArray eventName = trimValue(line);
+            line = reply->readAll();
+            if (eventName == "put")
             {
                 emit eventDataChanged(trimValue(line));
             }
@@ -73,13 +73,13 @@ void Firebase::setValue(QJsonDocument jsonDoc,
                       "application/x-www-form-urlencoded");
     QByteArray jsonBA = jsonDoc.toJson(QJsonDocument::Compact);
 
-    QBuffer *buffer=new QBuffer();
-    buffer->open((QBuffer::ReadWrite));
+    QBuffer *buffer = new QBuffer();
+    buffer->open(QBuffer::ReadWrite);
     buffer->write(jsonBA);
     buffer->seek(0);
 
     QByteArray verbBA = verb.toUtf8();
-    manager->sendCustomRequest(request, verbBA ,buffer);
+    manager->sendCustomRequest(request, verbBA, buffer);
     buffer->close();
 }
 
@@ -120,6 +120,7 @@ QByteArray Firebase::trimValue(const QByteArray &line) const
     int index = line.indexOf(':');
     if (index > 0)
         value = line.right(line.size() - index  - 1);
+
     return value.trimmed();
 }
 
@@ -127,6 +128,7 @@ QString Firebase::forceEndChar(const QString &string, char endCh)
 {
     if (string[string.length()-1] != endCh)
         return QString(string).append(endCh);
+
     return string;
 }
 
@@ -134,5 +136,6 @@ QString Firebase::forceStartChar(const QString &string, char startCh)
 {
     if (string.length() > 0 && string[0] != startCh)
         return QString(string).prepend(startCh);
+
     return string;
 }
