@@ -134,7 +134,7 @@ signals:
     /*!
      * \brief eventResponseReady Sent after a
      * <a href="http://doc.qt.io/qt-5/qnetworkaccessmanager.html#finished">
-     * QNetworkAccessManager::finished()</a> signal is revived.
+     * QNetworkAccessManager::finished()</a> signal is received.
      *
      * Handle this * signal if you want to inspect the reply.
      *
@@ -147,12 +147,20 @@ signals:
      * \brief eventDataChanged Sent after a
      * <a href="http://doc.qt.io/qt-5/qiodevice.html#readyRead">
      * QNetworkReply::readyRead</a> is received. It checks
+     * for a "keep-alive" event with non empty data before forwarding the signal.
+     */
+    void eventKeepAlive();
+
+    /*!
+     * \brief eventDataChanged Sent after a
+     * <a href="http://doc.qt.io/qt-5/qiodevice.html#readyRead">
+     * QNetworkReply::readyRead</a> is received. It checks
      * for a "put" event with non empty data before forwarding the signal.
      *
      * \param changedData holds the update detected to the REST endpoint.
      * The first signal received is the initial contents of the endpoint.
      */
-    void eventDataChanged(QByteArray changedData);
+    void eventPut(QJsonObject changedData);
 
 private slots:
     void replyFinished(QNetworkReply*);
@@ -165,6 +173,8 @@ private:
     QNetworkAccessManager *manager;
 
     void open(const QUrl &url);
+    void parseKeepAlive(QByteArray data);
+    void parsePut(QByteArray data);
 
     QByteArray signMessage(QByteArray toSign, QByteArray privateKey);
     QString buildPath(const QString &queryString = "");

@@ -13,56 +13,6 @@ Firebase::Firebase(const QString &hostName,
     connect(manager, &QNetworkAccessManager::finished, this, &Firebase::replyFinished);
 }
 
-void Firebase::listenEvents(const QString& queryString)
-{
-    open(buildPath(queryString));
-}
-
-void Firebase::open(const QUrl &url)
-{
-    QNetworkRequest request(url);
-    request.setRawHeader("Accept", "text/event-stream");
-    QNetworkReply *_reply = manager->get(request);
-    connect(_reply, &QNetworkReply::readyRead, this, &Firebase::eventReadyRead);
-    connect(_reply, &QNetworkReply::finished, this, &Firebase::eventFinished);
-}
-
-void Firebase::eventFinished()
-{
-    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    if (reply)
-    {
-        QUrl redirectUrl = reply->attribute(
-                    QNetworkRequest::RedirectionTargetAttribute).toUrl();
-        if (!redirectUrl.isEmpty())
-        {
-            reply->deleteLater();
-            open(redirectUrl);
-            return;
-        }
-        reply->deleteLater();
-    }
-}
-
-void Firebase::eventReadyRead()
-{
-    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    if (reply)
-    {
-        QByteArray line = reply->readLine();
-        if (!line.isEmpty())
-        {
-            QByteArray eventName = trimValue(line);
-            line = reply->readAll();
-            if (eventName == "put")
-            {
-                emit eventDataChanged(trimValue(line));
-            }
-        }
-    }
-    reply->readAll();
-}
-
 void Firebase::setValue(QJsonDocument jsonDoc,
                         const QString &verb,
                         const QString& queryString)
@@ -89,14 +39,90 @@ void Firebase::getValue(const QString& queryString)
     manager->get(request);
 }
 
-void Firebase::replyFinished(QNetworkReply *reply)
+void Firebase::listenEvents(const QString& queryString)
 {
-    emit eventResponseReady(reply->readAll());
+    open(buildPath(queryString));
 }
 
 QString Firebase::getPath(const QString &queryString)
 {
     return buildPath(queryString);
+}
+
+void Firebase::replyFinished(QNetworkReply *reply)
+{
+    emit eventResponseReady(reply->readAll());
+}
+
+void Firebase::eventFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) {
+        return;
+    }
+
+    QUrl redirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+    if (!redirectUrl.isEmpty()) {
+        reply->deleteLater();
+        open(redirectUrl);
+        return;
+    }
+    reply->deleteLater();
+}
+
+void Firebase::eventReadyRead()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) {
+        return;
+    }
+
+    QByteArray event = reply->readLine();
+    if (event.isEmpty()) {
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+
+    if (event == "event: keep-alive\n") {
+        parseKeepAlive(data);
+    }
+    else if (event == "event: put\n") {
+        parsePut(data);
+    }
+    else {
+        qWarning() << "Unknown Firebase event";
+    }
+}
+
+void Firebase::open(const QUrl &url)
+{
+    QNetworkRequest request(url);
+    request.setRawHeader("Accept", "text/event-stream");
+    QNetworkReply *_reply = manager->get(request);
+    connect(_reply, &QNetworkReply::readyRead, this, &Firebase::eventReadyRead);
+    connect(_reply, &QNetworkReply::finished, this, &Firebase::eventFinished);
+}
+
+void Firebase::parseKeepAlive(QByteArray data)
+{
+    Q_UNUSED(data)
+
+    emit eventKeepAlive();
+}
+
+void Firebase::parsePut(QByteArray data)
+{
+    data = trimValue(data);
+
+    QJsonParseError error;
+    QJsonDocument replyDoc = QJsonDocument::fromJson(data, &error);
+    if (!replyDoc.isObject()) {
+        qWarning() << "Malformed Firebase put data:" << data << error.error << error.errorString();
+        return;
+    }
+
+    emit eventPut(replyDoc.object());
 }
 
 QString Firebase::buildPath(const QString &queryString)
@@ -114,16 +140,6 @@ QString Firebase::buildPath(const QString &queryString)
     return destination;
 }
 
-QByteArray Firebase::trimValue(const QByteArray &line) const
-{
-    QByteArray value;
-    int index = line.indexOf(':');
-    if (index > 0)
-        value = line.right(line.size() - index  - 1);
-
-    return value.trimmed();
-}
-
 QString Firebase::forceEndChar(const QString &string, char endCh)
 {
     if (string[string.length()-1] != endCh)
@@ -138,4 +154,14 @@ QString Firebase::forceStartChar(const QString &string, char startCh)
         return QString(string).prepend(startCh);
 
     return string;
+}
+
+QByteArray Firebase::trimValue(const QByteArray &line) const
+{
+    QByteArray value;
+    int index = line.indexOf(':');
+    if (index > 0)
+        value = line.right(line.size() - index  - 1);
+
+    return value.trimmed();
 }
