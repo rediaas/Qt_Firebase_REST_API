@@ -147,7 +147,7 @@ signals:
      * \brief eventDataChanged Sent after a
      * <a href="http://doc.qt.io/qt-5/qiodevice.html#readyRead">
      * QNetworkReply::readyRead</a> is received. It checks
-     * for a "keep-alive" event with non empty data before forwarding the signal.
+     * for a "keep-alive" event.
      */
     void eventKeepAlive();
 
