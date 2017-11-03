@@ -91,7 +91,7 @@ void Firebase::eventReadyRead()
         parsePut(data);
     }
     else {
-        qWarning() << "Unknown Firebase event";
+        qWarning() << "Unknown Firebase event:" << event;
     }
 }
 
