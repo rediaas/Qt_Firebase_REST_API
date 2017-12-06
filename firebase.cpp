@@ -1,16 +1,14 @@
 #include "firebase.h"
 
-Firebase::Firebase(const QString &hostName,
-                   const QString &dbPath,
-                   QObject *parent)
+Firebase::Firebase(const QString &hostName, const QString &firebaseFunctionHost,
+                   const QString &dbPath, QObject *parent)
    : QObject(parent)
-   , manager(new QNetworkAccessManager(this))
-   , firebaseToken(QString(""))
+   , mManager(new QNetworkAccessManager(this))
+   , mFirebaseFunctionHost(firebaseFunctionHost)
+   , mFirebaseToken(QString(""))
 {
-    host = forceEndChar(hostName.trimmed(), '/');
-    host = host.append(dbPath.trimmed());
-
-    connect(manager, &QNetworkAccessManager::finished, this, &Firebase::replyFinished);
+    mHost = forceEndChar(hostName.trimmed(), '/');
+    mHost = mHost.append(dbPath.trimmed());
 }
 
 void Firebase::setValue(QJsonDocument jsonDoc,
@@ -29,14 +27,17 @@ void Firebase::setValue(QJsonDocument jsonDoc,
     buffer->seek(0);
 
     QByteArray verbBA = verb.toUtf8();
-    manager->sendCustomRequest(request, verbBA, buffer);
+    mManager->sendCustomRequest(request, verbBA, buffer);
     buffer->close();
 }
 
 void Firebase::getValue(const QString& queryString)
 {
     QNetworkRequest request(buildPath(queryString));
-    manager->get(request);
+    QNetworkReply *reply = mManager->get(request);
+    QObject::connect(reply, &QNetworkReply::finished, [=]() {
+        qDebug() << "No getValue reply implementation";
+    });
 }
 
 void Firebase::listenEvents(const QString& queryString)
@@ -49,9 +50,20 @@ QString Firebase::getPath(const QString &queryString)
     return buildPath(queryString);
 }
 
-void Firebase::replyFinished(QNetworkReply *reply)
+void Firebase::callFunction(QString function)
 {
-    emit eventResponseReady(reply->readAll());
+    QNetworkRequest functionRequest(mFirebaseFunctionHost + function);
+    QNetworkReply *reply = mManager->get(functionRequest);
+    QObject::connect(reply, &QNetworkReply::finished, [=]() {
+        functionFinished(reply);
+    });
+}
+
+void Firebase::functionFinished(QNetworkReply *reply)
+{
+    QByteArray data = reply->readAll();
+    emit functionResponseReady(data);
+    reply->deleteLater();
 }
 
 void Firebase::eventFinished()
@@ -99,9 +111,9 @@ void Firebase::open(const QUrl &url)
 {
     QNetworkRequest request(url);
     request.setRawHeader("Accept", "text/event-stream");
-    QNetworkReply *_reply = manager->get(request);
-    connect(_reply, &QNetworkReply::readyRead, this, &Firebase::eventReadyRead);
-    connect(_reply, &QNetworkReply::finished, this, &Firebase::eventFinished);
+    QNetworkReply *reply = mManager->get(request);
+    connect(reply, &QNetworkReply::readyRead, this, &Firebase::eventReadyRead);
+    connect(reply, &QNetworkReply::finished, this, &Firebase::eventFinished);
 }
 
 void Firebase::parseKeepAlive(QByteArray data)
@@ -127,7 +139,7 @@ void Firebase::parsePut(QByteArray data)
 
 QString Firebase::buildPath(const QString &queryString)
 {
-    QString destination=host;
+    QString destination=mHost;
 
     const int dotJsonLength = 5;
     if (destination.length() <= dotJsonLength

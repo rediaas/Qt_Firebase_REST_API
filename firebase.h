@@ -52,11 +52,12 @@ public:
      * \param dbPath Path in the database to the location of interest. If
      * necessary ".json" will be added at the end.
      *
+     * \param firebaseFunctionHost The host accepting Firebase function calls.
+     *
      * \param parent Assign parent QObject if required.
      */
-    explicit Firebase(const QString& hostName = "",
-                      const QString& dbPath = "",
-                      QObject *parent = nullptr);
+    explicit Firebase(const QString& hostName = QString(), const QString& firebaseFunctionHost = QString(),
+                      const QString& dbPath = QString(), QObject *parent = nullptr);
 
     /*!
      * \brief setValue Sends a write request to your Firebase database.
@@ -130,6 +131,12 @@ public:
      */
     QString getPath(const QString &queryString = "");
 
+    /*!
+     * \brief callFunction Sends a request to a Firebase function.
+     * \param function The name of the function to call.
+     */
+    void callFunction(QString function);
+
 signals:
     /*!
      * \brief eventResponseReady Sent after a
@@ -162,15 +169,22 @@ signals:
      */
     void eventPut(QJsonObject changedData);
 
+    /*!
+     * \brief functionResponseReady Signals the result of a function call.
+     * \param response Data returned from the function.
+     */
+    void functionResponseReady(QByteArray response);
+
 private slots:
-    void replyFinished(QNetworkReply*);
+    void functionFinished(QNetworkReply* reply);
     void eventFinished();
     void eventReadyRead();
 
 private:
-    QString host;
-    QString firebaseToken;
-    QNetworkAccessManager *manager;
+    QString mFirebaseFunctionHost;
+    QString mFirebaseToken;
+    QString mHost;
+    QNetworkAccessManager *mManager;
 
     void open(const QUrl &url);
     void parseKeepAlive(QByteArray data);
