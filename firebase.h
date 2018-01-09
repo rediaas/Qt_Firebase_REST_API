@@ -15,7 +15,6 @@
 #include <QtNetwork/QNetworkRequest>
 #include <QUrl>
 #include <QUrlQuery>
-#include <string.h>
 
 /*!
  * \brief The Firebase class provides access to the Firebase Database REST API
@@ -136,6 +135,19 @@ public:
      * \param function The name of the function to call.
      */
     void callFunction(QString function);
+
+    /*!
+     * \brief setHost Clear previous state and set a new host name.
+     * Call listenEvents to open a new connection to Firebase.
+     * \param hostName Firebase database URL. This will look something like
+     * [PROJECT_ID].firebaseio-demo.com/. A '/' will be added to the end if one
+     * is not already present. Your Firebase Database URL can be found on your
+     * Firebase console at the top of the 'Database rh-tab/Data top-tab'. This
+     * can be empty or null if operating on the whole database.
+     * \param dbPath Path in the database to the location of interest. If
+     * necessary ".json" will be added at the end.
+     */
+    void setHost(QString hostName, QString dbPath);
 
 signals:
     /*!
