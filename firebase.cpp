@@ -32,7 +32,7 @@ void Firebase::getValue(const QString& queryString)
 {
     QNetworkRequest request(buildPath(queryString));
     QNetworkReply *reply = mManager->get(request);
-    QObject::connect(reply, &QNetworkReply::finished, [=]() {
+    QObject::connect(reply, &QNetworkReply::finished, this, [=]() {
         qDebug() << "No getValue reply implementation";
     });
 }
@@ -51,7 +51,7 @@ void Firebase::callFunction(QString function)
 {
     QNetworkRequest functionRequest(mFirebaseFunctionHost + function);
     QNetworkReply *reply = mManager->get(functionRequest);
-    QObject::connect(reply, &QNetworkReply::finished, [=]() {
+    QObject::connect(reply, &QNetworkReply::finished, this, [=]() {
         functionFinished(reply);
     });
 }
